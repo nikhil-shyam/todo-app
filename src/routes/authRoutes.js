@@ -40,8 +40,31 @@ router.post('/register', (request, response) => {
   }
 });
 
-router.post('/login', (req, response) => {
+router.post('/login', (request, response) => {
+  const { username, password } = request.body;
 
+  try {
+    const getUser = db.prepare(`
+      SELECT * FROM users WHERE username = ?
+    `);
+    const user = getUser.get(username);
+
+    // if we can't find a user associated with that username
+    if (!user) return response.status(404).send({ message: "User not found" });
+
+    // if password doesn't match
+    const passwordIsValid = bcrypt.compareSync(password, user.password);
+    if (!passwordIsValid) return response.status(401).send({ message: "Invalid password" });
+
+    // then we have a successful auth
+    const token = jwt.sign({
+      id: user.id
+    }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    response.json({ token });
+  } catch (error) {
+    console.log(error.message);
+    response.sendStatus(503);
+  }
 });
 
 export default router;

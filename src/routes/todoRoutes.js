@@ -4,22 +4,27 @@ import db from '../db.js';
 const router = express.Router();
 
 // Get all todos for logged-in user
-router.get('/', (req, res) => {
+router.get('/', (request, response) => {
+  const getTodos = db.prepare(`
+    SELECT * FROM todos WHERE user_id = ?
+  `);
+  const todos = getTodos.all(request.userId);
 
+  response.json(todos);
 });
 
 // Create a new todo
-router.post('/', (req, res) => {
+router.post('/', (request, response) => {
 
 });
 
 // Update a todo
-router.put('/:id', (req, res) => {
+router.put('/:id', (request, response) => {
 
 });
 
 // Delete a tod
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (request, response) => {
 
 });
 
