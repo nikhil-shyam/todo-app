@@ -1,60 +1,64 @@
 import express from 'express';
-import db from '../db.js';
+import prisma from '../prismaClient.js';
 import { compileFunction } from 'vm';
 
 const router = express.Router();
 
 // Get all todos for logged-in user
-router.get('/', (request, response) => {
-  const getTodos = db.prepare(`
-    SELECT * FROM todos WHERE user_id = ?
-  `);
-  const todos = getTodos.all(request.userId);
+router.get('/', async (request, response) => {
+  const todos = await prisma.todo.findMany({
+    where: {
+      userId: request.userId
+    }
+  });
 
   response.json(todos);
 });
 
 // Create a new todo
-router.post('/', (request, response) => {
+router.post('/', async (request, response) => {
   const { task } = request.body;
-  const insertTodo = db.prepare(`
-    INSERT INTO todos (user_id, task)
-    VALUES (?, ?)
-  `);
-  const result = insertTodo.run(request.userId, task);
 
-  response.json({
-    id: result.lastInsertRowid,
-    task,
-    completed: 0
+  const todo = await prisma.todo.create({
+    data: {
+      task,
+      userId: request.userId
+    }
   });
+
+  response.json(todo);
 });
 
 // Update a todo
-router.put('/:id', (request, response) => {
-  console.log(request);
+router.put('/:id', async (request, response) => {
   const { completed } = request.body;
   const { id } = request.params;
   // const { urlParam } = request.query; // get url params
 
-  const updatedTodo = db.prepare(`
-    UPDATE todos SET completed = ?
-    WHERE id = ?
-  `);
-  updatedTodo.run(completed, id);
+  const updatedTodo = await prisma.todo.update({
+    where: {
+      id: parseInt(id),
+      userId: request.userId
+    },
+    data: {
+      completed: !!completed // !! - converts to boolean
+    }
+  })
 
-  response.json({ message: "Todo completed" });
+  response.json(updatedTodo);
 });
 
 // Delete a todo
-router.delete('/:id', (request, response) => {
+router.delete('/:id', async (request, response) => {
   const { id } = request.params;
   const { userId } = request
 
-  const deleteTodo = db.prepare(`
-    DELETE FROM todos WHERE id = ? AND user_id = ?
-  `);
-  deleteTodo.run(id, userId);
+  await prisma.todo.delete({
+    where: {
+      id: parseInt(id),
+      userId: userId
+    }
+  });
 
   response.send({ message: "Todo deleted"} );
 });
